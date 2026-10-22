@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestion des livraisons</title>
+    <style>
+      :root {
+        --fond: #f4f5f7;
+        --carte: #ffffff;
+        --texte: #1d2330;
+        --doux: #667085;
+        --bord: #e2e5ea;
+        --accent: #2f6fde;
+        --accent-texte: #ffffff;
+        --ok: #1f8a4c;
+        --erreur: #c62f2f;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fond: #14171c;
+          --carte: #1d2128;
+          --texte: #e6e8ec;
+          --doux: #9aa3b2;
+          --bord: #2e343e;
+          --accent: #5b8ff0;
+          --accent-texte: #0d1117;
+          --ok: #4cc584;
+          --erreur: #ff7070;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        background: var(--fond);
+        color: var(--texte);
+        font-size: 15px;
+      }
+      header {
+        padding: 20px 24px 8px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 22px;
+      }
+      header p {
+        margin: 0;
+        color: var(--doux);
+      }
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px 24px 40px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .carte {
+        background: var(--carte);
+        border: 1px solid var(--bord);
+        border-radius: 10px;
+        padding: 16px 18px;
+        min-width: 0;
+      }
+      .large {
+        grid-column: 1 / -1;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 17px;
+      }
+      h3 {
+        margin: 16px 0 8px;
+        font-size: 14px;
+        color: var(--doux);
+        font-weight: 600;
+      }
+      form,
+      .ligne-controles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: end;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        font-size: 13px;
+        color: var(--doux);
+        gap: 4px;
+      }
+      label.case {
+        flex-direction: row;
+        align-items: center;
+        color: var(--texte);
+        font-size: 14px;
+      }
+      input,
+      select {
+        font: inherit;
+        padding: 7px 9px;
+        border: 1px solid var(--bord);
+        border-radius: 6px;
+        background: var(--fond);
+        color: var(--texte);
+        width: 110px;
+      }
+      input[type="checkbox"] {
+        width: auto;
+      }
+      input.long {
+        width: 150px;
+      }
+      button {
+        font: inherit;
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        background: var(--accent);
+        color: var(--accent-texte);
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:hover {
+        filter: brightness(1.1);
+      }
+      .message {
+        margin-top: 10px;
+        font-size: 14px;
+        min-height: 20px;
+      }
+      .message.ok {
+        color: var(--ok);
+      }
+      .message.erreur {
+        color: var(--erreur);
+      }
+      .tableau {
+        overflow-x: auto;
+        margin-top: 12px;
+        max-height: 420px;
+        overflow-y: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--bord);
+        white-space: nowrap;
+      }
+      th {
+        position: sticky;
+        top: 0;
+        background: var(--carte);
+        color: var(--doux);
+        font-weight: 600;
+      }
+      td.nombre,
+      th.nombre {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .note {
+        color: var(--doux);
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .chiffres {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+      }
+      .chiffre {
+        background: var(--fond);
+        border-radius: 8px;
+        padding: 10px 12px;
+      }
+      .chiffre span {
+        display: block;
+        color: var(--doux);
+        font-size: 12px;
+      }
+      .chiffre strong {
+        font-size: 18px;
+        font-variant-numeric: tabular-nums;
+      }
+      .deux-colonnes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      td.reussi {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      td.rate {
+        color: var(--erreur);
+        font-weight: 600;
+      }
+      td.description {
+        white-space: normal;
+        min-width: 260px;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: wait;
+      }
+      @media (max-width: 800px) {
+        main {
+          grid-template-columns: 1fr;
+          padding: 12px 16px 32px;
+        }
+        header {
+          padding: 16px 16px 4px;
+        }
+        .deux-colonnes {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Gestion des livraisons</h1>
+      <p id="resume">Chargement...</p>
+    </header>
+
+    <main>
+      <section class="carte large">
+        <h2>Colis</h2>
+        <div class="ligne-controles">
+          <label
+            >Trier par
+            <select id="tri">
+              <option value="ajout">ordre d'ajout</option>
+              <option value="poids">poids</option>
+              <option value="valeur">valeur</option>
+              <option value="priorite">priorité</option>
+            </select>
+          </label>
+          <label
+            >Ordre
+            <select id="ordre">
+              <option value="asc">croissant</option>
+              <option value="desc">décroissant</option>
+            </select>
+          </label>
+        </div>
+        <div class="tableau"><table id="table-colis"></table></div>
+        <p class="note" id="note-colis"></p>
+      </section>
+
+      <section class="carte">
+        <h2>Ajouter un colis</h2>
+        <form id="form-ajout">
+          <label>ID <input name="id" type="number" min="0" required /></label>
+          <label
+            >Poids (kg) <input name="poids" type="number" min="1" required
+          /></label>
+          <label
+            >Valeur <input name="valeur" type="number" min="0" required
+          /></label>
+          <label
+            >Priorité <input name="priorite" type="number" min="1" required
+          /></label>
+          <label
+            >Destination <input name="destination" class="long" required
+          /></label>
+          <button type="submit">Ajouter</button>
+        </form>
+        <p class="message" id="msg-ajout"></p>
+      </section>
+
+      <section class="carte">
+        <h2>Rechercher un colis</h2>
+        <form id="form-recherche">
+          <label>ID <input name="id" type="number" min="0" required /></label>
+          <button type="submit">Rechercher</button>
+        </form>
+        <p class="message" id="msg-recherche"></p>
+
+        <h2 style="margin-top: 20px">Générer des colis aléatoires</h2>
+        <form id="form-generer">
+          <label
+            >Nombre
+            <input
+              name="n"
+              type="number"
+              min="1"
+              value="1000"
+              required
+          /></label>
+          <button type="submit">Générer</button>
+        </form>
+        <p class="message" id="msg-generer"></p>
+
+        <h2 style="margin-top: 20px">Données</h2>
+        <div class="ligne-controles">
+          <button id="bouton-exemple">Charger l'exemple de l'énoncé</button>
+          <button id="bouton-reinitialiser">Réinitialiser (0 colis)</button>
+        </div>
+        <p class="message" id="msg-donnees"></p>
+      </section>
+
+      <section class="carte large">
+        <h2>Préparer un camion</h2>
+        <form id="form-camion">
+          <label
+            >Capacité (kg)
+            <input name="capacite" type="number" min="0" value="50" required
+          /></label>
+          <label class="case"
+            ><input name="priorite" type="checkbox" /> Tenir compte des
+            priorités</label
+          >
+          <button type="submit">Préparer</button>
+        </form>
+        <p class="message" id="msg-camion"></p>
+        <div id="chargement"></div>
+      </section>
+
+      <section class="carte large">
+        <h2>Statistiques</h2>
+        <div class="chiffres" id="chiffres"></div>
+        <div class="deux-colonnes">
+          <div>
+            <h3>Par destination</h3>
+            <div class="tableau"><table id="table-destinations"></table></div>
+          </div>
+          <div>
+            <h3>Par priorité</h3>
+            <div class="tableau"><table id="table-priorites"></table></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="carte large">
+        <h2>Tests</h2>
+        <div class="ligne-controles">
+          <button id="bouton-tests">Lancer les tests</button>
+        </div>
+        <p class="message" id="msg-tests"></p>
+        <div class="tableau"><table id="table-tests"></table></div>
+      </section>
+
+      <section class="carte large">
+        <h2>Performances</h2>
+        <div class="ligne-controles" id="boutons-perf">
+          <button data-perf="recherche">Recherche</button>
+          <button data-perf="tri">Tri</button>
+          <button data-perf="camion_n">Camion (n varie)</button>
+          <button data-perf="camion_c">Camion (C varie)</button>
+          <button data-perf="tout">Tout lancer</button>
+        </div>
+        <p class="note">
+          Les mesures se font sur des colis générés exprès (100 à 100 000), pas sur ceux de la
+          liste. Certaines prennent quelques secondes.
+        </p>
+        <p class="message" id="msg-perf"></p>
+        <div id="resultats-perf"></div>
+      </section>
+    </main>
+
+    <script>
+      const nombre = (x, decimales = 0) =>
+        Number(x).toLocaleString("fr-FR", { maximumFractionDigits: decimales });
+
+      async function api(chemin, donnees) {
+        const options =
+          donnees === undefined
+            ? {}
+            : {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(donnees),
+              };
+        const reponse = await fetch(chemin, options);
+        const json = await reponse.json();
+        if (!reponse.ok) throw new Error(json.erreur || "Erreur");
+        return json;
+      }
+
+      function message(id, texte, ok) {
+        const el = document.getElementById(id);
+        el.textContent = texte;
+        el.className = "message " + (ok ? "ok" : "erreur");
+      }
+
+      function remplirTable(table, entetes, lignes, colonnesNombre = []) {
+        table.replaceChildren();
+        const tr = table.insertRow();
+        entetes.forEach((titre, i) => {
+          const th = document.createElement("th");
+          th.textContent = titre;
+          if (colonnesNombre.includes(i)) th.className = "nombre";
+          tr.appendChild(th);
+        });
+        for (const ligne of lignes) {
+          const tr = table.insertRow();
+          ligne.forEach((valeur, i) => {
+            const td = tr.insertCell();
+            td.textContent = valeur;
+            if (colonnesNombre.includes(i)) td.className = "nombre";
+          });
+        }
+      }
+
+      function tableColis(table, colis) {
+        remplirTable(
+          table,
+          ["ID", "Poids (kg)", "Valeur", "Priorité", "Destination"],
+          colis.map((c) => [
+            c.id,
+            nombre(c.poids),
+            nombre(c.valeur),
+            c.priorite,
+            c.destination,
+          ]),
+          [1, 2, 3],
+        );
+      }
+
+      async function chargerColis() {
+        const tri = document.getElementById("tri").value;
+        const ordre = document.getElementById("ordre").value;
+        const res = await api(`/api/colis?tri=${tri}&ordre=${ordre}`);
+        tableColis(document.getElementById("table-colis"), res.colis);
+        document.getElementById("note-colis").textContent =
+          res.total > res.colis.length
+            ? `${res.colis.length} premiers colis affichés sur ${nombre(res.total)}.`
+            : `${nombre(res.total)} colis.`;
+      }
+
+      async function chargerStats() {
+        const s = await api("/api/stats");
+        document.getElementById("resume").textContent =
+          `${nombre(s.nombre)} colis, ${nombre(s.poids_total)} kg au total`;
+        const chiffres = [
+          ["Colis", nombre(s.nombre)],
+          ["Poids total", nombre(s.poids_total) + " kg"],
+          ["Valeur totale", nombre(s.valeur_total)],
+          ["Poids moyen", nombre(s.poids_moyen, 1) + " kg"],
+          ["Valeur moyenne", nombre(s.valeur_moyenne, 1)],
+        ];
+        const conteneur = document.getElementById("chiffres");
+        conteneur.replaceChildren();
+        for (const [titre, valeur] of chiffres) {
+          const div = document.createElement("div");
+          div.className = "chiffre";
+          const span = document.createElement("span");
+          span.textContent = titre;
+          const strong = document.createElement("strong");
+          strong.textContent = valeur;
+          div.append(span, strong);
+          conteneur.appendChild(div);
+        }
+        const destinations = Object.entries(s.par_destination).sort(
+          (a, b) => b[1] - a[1],
+        );
+        remplirTable(
+          document.getElementById("table-destinations"),
+          ["Destination", "Colis"],
+          destinations.map(([d, n]) => [d, nombre(n)]),
+          [1],
+        );
+        const priorites = Object.entries(s.par_priorite).sort(
+          (a, b) => b[0] - a[0],
+        );
+        remplirTable(
+          document.getElementById("table-priorites"),
+          ["Priorité", "Colis"],
+          priorites.map(([p, n]) => [p, nombre(n)]),
+          [1],
+        );
+      }
+
+      function afficherChargement(c) {
+        const zone = document.getElementById("chargement");
+        zone.replaceChildren();
+        if (!c) return;
+
+        const titre = document.createElement("h3");
+        titre.textContent =
+          `Dernier chargement (camion de ${nombre(c.capacite)} kg, ` +
+          (c.priorite ? "avec priorités)" : "sans priorités)");
+        zone.appendChild(titre);
+
+        const chiffres = document.createElement("div");
+        chiffres.className = "chiffres";
+        const infos = [
+          ["Colis chargés", nombre(c.colis.length)],
+          ["Poids utilisé", `${nombre(c.poids)} / ${nombre(c.capacite)} kg`],
+          ["Valeur réelle", nombre(c.valeur)],
+        ];
+        if (c.priorite) infos.push(["Score", nombre(c.score, 2)]);
+        infos.push(["Temps de calcul", nombre(c.temps_ms, 1) + " ms"]);
+        for (const [t, v] of infos) {
+          const div = document.createElement("div");
+          div.className = "chiffre";
+          const span = document.createElement("span");
+          span.textContent = t;
+          const strong = document.createElement("strong");
+          strong.textContent = v;
+          div.append(span, strong);
+          chiffres.appendChild(div);
+        }
+        zone.appendChild(chiffres);
+
+        const g = c.glouton;
+        const comparaison = document.createElement("p");
+        comparaison.className = "note";
+        const critere = c.priorite ? "score" : "valeur";
+        const ecart = c.priorite ? c.score - g.score : c.valeur - g.valeur;
+        comparaison.textContent =
+          `Pour comparer, le glouton aurait chargé ${nombre(g.nombre)} colis ` +
+          `(${nombre(g.poids)} kg, valeur ${nombre(g.valeur)}` +
+          (c.priorite ? `, score ${nombre(g.score, 2)}` : "") +
+          `) en ${nombre(g.temps_ms, 1)} ms. ` +
+          (ecart > 0.001
+            ? `La programmation dynamique fait mieux de ${nombre(ecart, 2)} en ${critere}.`
+            : `Ici il trouve le même ${critere} que la programmation dynamique.`);
+        zone.appendChild(comparaison);
+
+        const tableau = document.createElement("div");
+        tableau.className = "tableau";
+        const table = document.createElement("table");
+        tableau.appendChild(table);
+        zone.appendChild(tableau);
+        tableColis(table, c.colis);
+      }
+
+      async function toutRecharger() {
+        await Promise.all([chargerColis(), chargerStats()]);
+      }
+
+      document.getElementById("tri").addEventListener("change", chargerColis);
+      document.getElementById("ordre").addEventListener("change", chargerColis);
+
+      document
+        .getElementById("form-ajout")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const donnees = Object.fromEntries(new FormData(e.target));
+          try {
+            const c = await api("/api/colis", donnees);
+            message("msg-ajout", `Colis ${c.id} ajouté.`, true);
+            e.target.reset();
+            await toutRecharger();
+          } catch (err) {
+            message("msg-ajout", err.message, false);
+          }
+        });
+
+      document
+        .getElementById("form-recherche")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const id = new FormData(e.target).get("id");
+          try {
+            const c = await api(`/api/colis/${encodeURIComponent(id)}`);
+            message(
+              "msg-recherche",
+              `Colis ${c.id} : ${c.poids} kg, valeur ${c.valeur}, priorité ${c.priorite}, vers ${c.destination}`,
+              true,
+            );
+          } catch (err) {
+            message("msg-recherche", err.message, false);
+          }
+        });
+
+      document
+        .getElementById("form-generer")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          try {
+            const res = await api(
+              "/api/generer",
+              Object.fromEntries(new FormData(e.target)),
+            );
+            message(
+              "msg-generer",
+              `${nombre(res.ajoutes)} colis ajoutés (${nombre(res.total)} au total).`,
+              true,
+            );
+            await toutRecharger();
+          } catch (err) {
+            message("msg-generer", err.message, false);
+          }
+        });
+
+      async function changerDonnees(route, texte) {
+        try {
+          await api(route, {});
+          message("msg-donnees", texte, true);
+          afficherChargement(null);
+          await toutRecharger();
+        } catch (err) {
+          message("msg-donnees", err.message, false);
+        }
+      }
+
+      document
+        .getElementById("bouton-exemple")
+        .addEventListener("click", () =>
+          changerDonnees("/api/exemple", "Les 5 colis de l'énoncé sont chargés."),
+        );
+      document
+        .getElementById("bouton-reinitialiser")
+        .addEventListener("click", () =>
+          changerDonnees("/api/reinitialiser", "Tous les colis ont été supprimés."),
+        );
+
+      document
+        .getElementById("form-camion")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const form = new FormData(e.target);
+          message("msg-camion", "Calcul en cours...", true);
+          try {
+            const c = await api("/api/camion", {
+              capacite: form.get("capacite"),
+              priorite: form.get("priorite") === "on",
+            });
+            message("msg-camion", "", true);
+            afficherChargement(c);
+          } catch (err) {
+            message("msg-camion", err.message, false);
+          }
+        });
+
+      document.getElementById("bouton-tests").addEventListener("click", async (e) => {
+        e.target.disabled = true;
+        message("msg-tests", "Tests en cours...", true);
+        try {
+          const res = await api("/api/tests", {});
+          const reussis = res.resultats.filter((r) => r.ok).length;
+          const total = res.resultats.length;
+          message(
+            "msg-tests",
+            `${reussis} / ${total} tests réussis en ${nombre(res.temps_ms)} ms.`,
+            reussis === total,
+          );
+          const table = document.getElementById("table-tests");
+          remplirTable(
+            table,
+            ["Résultat", "Test", "Ce qu'il vérifie", "Message"],
+            res.resultats.map((r) => [r.ok ? "OK" : "ÉCHEC", r.nom, r.description || "", r.message]),
+          );
+          [...table.rows].slice(1).forEach((tr, i) => {
+            tr.cells[0].className = res.resultats[i].ok ? "reussi" : "rate";
+            tr.cells[2].className = "description";
+          });
+        } catch (err) {
+          message("msg-tests", err.message, false);
+        }
+        e.target.disabled = false;
+      });
+
+      const resultatsPerf = {};
+
+      function afficherPerf(nom, tableau) {
+        let bloc = resultatsPerf[nom];
+        if (!bloc) {
+          bloc = document.createElement("div");
+          resultatsPerf[nom] = bloc;
+          document.getElementById("resultats-perf").appendChild(bloc);
+        }
+        bloc.replaceChildren();
+        const titre = document.createElement("h3");
+        titre.textContent = tableau.titre;
+        const conteneur = document.createElement("div");
+        conteneur.className = "tableau";
+        const table = document.createElement("table");
+        conteneur.appendChild(table);
+        bloc.append(titre, conteneur);
+        remplirTable(
+          table,
+          tableau.colonnes,
+          tableau.lignes.map((l) => l.map((v) => (Number.isInteger(v) ? nombre(v) : nombre(v, 2)))),
+          tableau.colonnes.map((_, i) => i),
+        );
+      }
+
+      document.getElementById("boutons-perf").addEventListener("click", async (e) => {
+        const choix = e.target.dataset.perf;
+        if (!choix) return;
+        const boutons = document.querySelectorAll("#boutons-perf button");
+        const noms = choix === "tout" ? ["recherche", "tri", "camion_n", "camion_c"] : [choix];
+        boutons.forEach((b) => (b.disabled = true));
+        try {
+          for (const nom of noms) {
+            const bouton = document.querySelector(`#boutons-perf [data-perf="${nom}"]`);
+            message("msg-perf", `Mesure en cours : ${bouton.textContent}...`, true);
+            const debut = performance.now();
+            afficherPerf(nom, await api(`/api/perf/${nom}`, {}));
+            message("msg-perf", `Terminé (${nombre((performance.now() - debut) / 1000, 1)} s).`, true);
+          }
+        } catch (err) {
+          message("msg-perf", err.message, false);
+        }
+        boutons.forEach((b) => (b.disabled = false));
+      });
+
+      toutRecharger();
+      api("/api/camion").then(afficherChargement);
+    </script>
+  </body>
+</html>
