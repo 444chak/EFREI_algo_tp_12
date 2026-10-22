@@ -6,7 +6,7 @@ from flask import Flask, jsonify, render_template, request
 from camion import charger_dp, charger_glouton, score_priorite, totaux
 from colis import Colis
 from gestion import GestionColis, exemple
-from perf import PERFS, generer_colis
+from perf import PERFS, generer_colis, perf_camion_c
 from tests import executer_tests
 
 LIMITE_AFFICHAGE = 100
@@ -52,7 +52,9 @@ def lister():
         colis = gestion.getall()
         if decroissant:
             colis.reverse()
-    return jsonify(total=len(colis), colis=[asdict(c) for c in colis[:LIMITE_AFFICHAGE]])
+    return jsonify(
+        total=len(colis), colis=[asdict(c) for c in colis[:LIMITE_AFFICHAGE]]
+    )
 
 
 @app.get("/api/colis/<int:id_colis>")
@@ -163,14 +165,39 @@ def statistiques():
 def tests():
     debut = time.perf_counter()
     resultats = executer_tests()
-    return jsonify(resultats=resultats, temps_ms=round((time.perf_counter() - debut) * 1000))
+    return jsonify(
+        resultats=resultats, temps_ms=round((time.perf_counter() - debut) * 1000)
+    )
 
 
 @app.post("/api/perf/<nom>")
 def performances(nom):
     if nom not in PERFS:
         return jsonify(erreur="Mesure inconnue"), 404
-    return jsonify(PERFS[nom]())
+    donnees = request.get_json(silent=True) or {}
+    if donnees.get("source") != "liste":
+        return jsonify(PERFS[nom]())
+
+    colis = gestion.getall()
+    n = len(colis)
+    if n == 0:
+        raise ValueError("Aucun colis dans la liste, ajoutez-en ou générez-en d'abord")
+    if nom == "camion_c":
+        capacites = [c for c in (50, 500, 5_000) if n * (c + 1) <= MEMOIRE_MAX]
+        if not capacites:
+            raise ValueError(
+                f"Trop de colis ({n}) pour la DP, même avec un camion de 50 kg"
+            )
+        tableau = perf_camion_c(colis, capacites)
+        tableau["titre"] = "La capacité C varie"
+    else:
+        if nom == "camion_n" and n * 51 > MEMOIRE_MAX:
+            raise ValueError(f"Trop de colis ({n}) pour la DP avec un camion de 50 kg")
+        tableau = PERFS[nom]([colis])
+    tableau["titre"] = (
+        tableau["titre"].replace(", n varie", "") + f" (liste chargée, {n} colis)"
+    )
+    return jsonify(tableau)
 
 
 if __name__ == "__main__":

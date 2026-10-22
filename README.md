@@ -54,7 +54,7 @@ Plutôt qu'un menu dans le terminal, j'ai fait une petite interface web avec Fla
 - préparer un camion avec ou sans priorités, et voir le chargement avec le poids utilisé, la valeur, le score, le temps de calcul et ce qu'aurait donné le glouton
 - voir les statistiques : nombre de colis, totaux, moyennes, répartition par destination et par priorité
 - lancer les tests et voir le résultat de chacun
-- lancer les mesures de performances (recherche, tri, camion quand n varie, camion quand C varie) et voir les tableaux de résultats
+- lancer les mesures de performances (recherche, tri, camion quand n varie, camion quand C varie) et voir les tableaux de résultats, soit sur des colis générés exprès (100 à 100 000), soit sur la liste de colis chargée
 
 Les tests et les mesures peuvent aussi se lancer dans le terminal avec `python tests.py` et `python perf.py`.
 

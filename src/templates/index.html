@@ -296,13 +296,7 @@
         <h2 style="margin-top: 20px">Générer des colis aléatoires</h2>
         <form id="form-generer">
           <label
-            >Nombre
-            <input
-              name="n"
-              type="number"
-              min="1"
-              value="1000"
-              required
+            >Nombre <input name="n" type="number" min="1" value="1000" required
           /></label>
           <button type="submit">Générer</button>
         </form>
@@ -360,6 +354,13 @@
       <section class="carte large">
         <h2>Performances</h2>
         <div class="ligne-controles" id="boutons-perf">
+          <label
+            >Sur quels colis
+            <select id="source-perf" class="long">
+              <option value="generes">colis générés (100 à 100 000)</option>
+              <option value="liste" id="option-liste">liste chargée</option>
+            </select>
+          </label>
           <button data-perf="recherche">Recherche</button>
           <button data-perf="tri">Tri</button>
           <button data-perf="camion_n">Camion (n varie)</button>
@@ -367,8 +368,10 @@
           <button data-perf="tout">Tout lancer</button>
         </div>
         <p class="note">
-          Les mesures se font sur des colis générés exprès (100 à 100 000), pas sur ceux de la
-          liste. Certaines prennent quelques secondes.
+          Avec les colis générés, chaque mesure est faite pour 100, 1 000, 10
+          000 et 100 000 colis (et 10 000 colis pour « C varie »). Avec la liste
+          chargée, elle est faite une fois sur les colis de la liste. Certaines
+          mesures prennent quelques secondes.
         </p>
         <p class="message" id="msg-perf"></p>
         <div id="resultats-perf"></div>
@@ -449,6 +452,8 @@
         const s = await api("/api/stats");
         document.getElementById("resume").textContent =
           `${nombre(s.nombre)} colis, ${nombre(s.poids_total)} kg au total`;
+        document.getElementById("option-liste").textContent =
+          `liste chargée (${nombre(s.nombre)} colis)`;
         const chiffres = [
           ["Colis", nombre(s.nombre)],
           ["Poids total", nombre(s.poids_total) + " kg"],
@@ -616,12 +621,18 @@
       document
         .getElementById("bouton-exemple")
         .addEventListener("click", () =>
-          changerDonnees("/api/exemple", "Les 5 colis de l'énoncé sont chargés."),
+          changerDonnees(
+            "/api/exemple",
+            "Les 5 colis de l'énoncé sont chargés.",
+          ),
         );
       document
         .getElementById("bouton-reinitialiser")
         .addEventListener("click", () =>
-          changerDonnees("/api/reinitialiser", "Tous les colis ont été supprimés."),
+          changerDonnees(
+            "/api/reinitialiser",
+            "Tous les colis ont été supprimés.",
+          ),
         );
 
       document
@@ -642,41 +653,48 @@
           }
         });
 
-      document.getElementById("bouton-tests").addEventListener("click", async (e) => {
-        e.target.disabled = true;
-        message("msg-tests", "Tests en cours...", true);
-        try {
-          const res = await api("/api/tests", {});
-          const reussis = res.resultats.filter((r) => r.ok).length;
-          const total = res.resultats.length;
-          message(
-            "msg-tests",
-            `${reussis} / ${total} tests réussis en ${nombre(res.temps_ms)} ms.`,
-            reussis === total,
-          );
-          const table = document.getElementById("table-tests");
-          remplirTable(
-            table,
-            ["Résultat", "Test", "Ce qu'il vérifie", "Message"],
-            res.resultats.map((r) => [r.ok ? "OK" : "ÉCHEC", r.nom, r.description || "", r.message]),
-          );
-          [...table.rows].slice(1).forEach((tr, i) => {
-            tr.cells[0].className = res.resultats[i].ok ? "reussi" : "rate";
-            tr.cells[2].className = "description";
-          });
-        } catch (err) {
-          message("msg-tests", err.message, false);
-        }
-        e.target.disabled = false;
-      });
+      document
+        .getElementById("bouton-tests")
+        .addEventListener("click", async (e) => {
+          e.target.disabled = true;
+          message("msg-tests", "Tests en cours...", true);
+          try {
+            const res = await api("/api/tests", {});
+            const reussis = res.resultats.filter((r) => r.ok).length;
+            const total = res.resultats.length;
+            message(
+              "msg-tests",
+              `${reussis} / ${total} tests réussis en ${nombre(res.temps_ms)} ms.`,
+              reussis === total,
+            );
+            const table = document.getElementById("table-tests");
+            remplirTable(
+              table,
+              ["Résultat", "Test", "Ce qu'il vérifie", "Message"],
+              res.resultats.map((r) => [
+                r.ok ? "OK" : "ÉCHEC",
+                r.nom,
+                r.description || "",
+                r.message,
+              ]),
+            );
+            [...table.rows].slice(1).forEach((tr, i) => {
+              tr.cells[0].className = res.resultats[i].ok ? "reussi" : "rate";
+              tr.cells[2].className = "description";
+            });
+          } catch (err) {
+            message("msg-tests", err.message, false);
+          }
+          e.target.disabled = false;
+        });
 
       const resultatsPerf = {};
 
-      function afficherPerf(nom, tableau) {
-        let bloc = resultatsPerf[nom];
+      function afficherPerf(cle, tableau) {
+        let bloc = resultatsPerf[cle];
         if (!bloc) {
           bloc = document.createElement("div");
-          resultatsPerf[nom] = bloc;
+          resultatsPerf[cle] = bloc;
           document.getElementById("resultats-perf").appendChild(bloc);
         }
         bloc.replaceChildren();
@@ -690,30 +708,51 @@
         remplirTable(
           table,
           tableau.colonnes,
-          tableau.lignes.map((l) => l.map((v) => (Number.isInteger(v) ? nombre(v) : nombre(v, 2)))),
+          tableau.lignes.map((l) =>
+            l.map((v) => (Number.isInteger(v) ? nombre(v) : nombre(v, 2))),
+          ),
           tableau.colonnes.map((_, i) => i),
         );
       }
 
-      document.getElementById("boutons-perf").addEventListener("click", async (e) => {
-        const choix = e.target.dataset.perf;
-        if (!choix) return;
-        const boutons = document.querySelectorAll("#boutons-perf button");
-        const noms = choix === "tout" ? ["recherche", "tri", "camion_n", "camion_c"] : [choix];
-        boutons.forEach((b) => (b.disabled = true));
-        try {
-          for (const nom of noms) {
-            const bouton = document.querySelector(`#boutons-perf [data-perf="${nom}"]`);
-            message("msg-perf", `Mesure en cours : ${bouton.textContent}...`, true);
-            const debut = performance.now();
-            afficherPerf(nom, await api(`/api/perf/${nom}`, {}));
-            message("msg-perf", `Terminé (${nombre((performance.now() - debut) / 1000, 1)} s).`, true);
+      document
+        .getElementById("boutons-perf")
+        .addEventListener("click", async (e) => {
+          const choix = e.target.dataset.perf;
+          if (!choix) return;
+          const boutons = document.querySelectorAll("#boutons-perf button");
+          const source = document.getElementById("source-perf").value;
+          const noms =
+            choix === "tout"
+              ? ["recherche", "tri", "camion_n", "camion_c"]
+              : [choix];
+          boutons.forEach((b) => (b.disabled = true));
+          try {
+            for (const nom of noms) {
+              const bouton = document.querySelector(
+                `#boutons-perf [data-perf="${nom}"]`,
+              );
+              message(
+                "msg-perf",
+                `Mesure en cours : ${bouton.textContent}...`,
+                true,
+              );
+              const debut = performance.now();
+              afficherPerf(
+                `${source}-${nom}`,
+                await api(`/api/perf/${nom}`, { source }),
+              );
+              message(
+                "msg-perf",
+                `Terminé (${nombre((performance.now() - debut) / 1000, 1)} s).`,
+                true,
+              );
+            }
+          } catch (err) {
+            message("msg-perf", err.message, false);
           }
-        } catch (err) {
-          message("msg-perf", err.message, false);
-        }
-        boutons.forEach((b) => (b.disabled = false));
-      });
+          boutons.forEach((b) => (b.disabled = false));
+        });
 
       toutRecharger();
       api("/api/camion").then(afficherChargement);

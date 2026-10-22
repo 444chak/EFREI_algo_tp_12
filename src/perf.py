@@ -37,10 +37,15 @@ def mesurer(fonction, repetitions=3):
     return meilleur, resultat
 
 
-def perf_recherche(nb_recherches=200):
+def jeux_generes():
+    """Un jeu de colis aléatoires pour chaque taille de TAILLES."""
+    return [generer_colis(n) for n in TAILLES]
+
+
+def perf_recherche(jeux=None, nb_recherches=200):
     lignes = []
-    for n in TAILLES:
-        colis = generer_colis(n)
+    for colis in jeux or jeux_generes():
+        n = len(colis)
         g = GestionColis()
         for c in colis:
             g.add(c)
@@ -50,7 +55,9 @@ def perf_recherche(nb_recherches=200):
         )
         k = len(a_chercher)
         t_lin = mesurer(lambda: [recherche_lineaire(colis, i) for i in a_chercher])[0]
-        t_dicho = mesurer(lambda: [recherche_dichotomique(tries, i) for i in a_chercher])[0]
+        t_dicho = mesurer(
+            lambda: [recherche_dichotomique(tries, i) for i in a_chercher]
+        )[0]
         t_dict = mesurer(lambda: [g.get(i) for i in a_chercher])[0]
         lignes.append([n, t_lin / k * 1e6, t_dicho / k * 1e6, t_dict / k * 1e6])
     return {
@@ -60,10 +67,10 @@ def perf_recherche(nb_recherches=200):
     }
 
 
-def perf_tri():
+def perf_tri(jeux=None):
     lignes = []
-    for n in TAILLES:
-        colis = generer_colis(n)
+    for colis in jeux or jeux_generes():
+        n = len(colis)
         t_fusion = mesurer(lambda: tri_fusion(colis, lambda c: c.poids))[0]
         t_sorted = mesurer(lambda: sorted(colis, key=lambda c: c.poids))[0]
         lignes.append([n, t_fusion * 1e3, t_sorted * 1e3])
@@ -74,13 +81,15 @@ def perf_tri():
     }
 
 
-def perf_camion_n(capacite=50):
+def perf_camion_n(jeux=None, capacite=50):
     lignes = []
-    for n in TAILLES:
-        colis = generer_colis(n)
+    for colis in jeux or jeux_generes():
+        n = len(colis)
         t_dp, charge_dp = mesurer(lambda: charger_dp(colis, capacite))
         t_gl, charge_gl = mesurer(lambda: charger_glouton(colis, capacite))
-        lignes.append([n, t_dp * 1e3, t_gl * 1e3, totaux(charge_dp)[1], totaux(charge_gl)[1]])
+        lignes.append(
+            [n, t_dp * 1e3, t_gl * 1e3, totaux(charge_dp)[1], totaux(charge_gl)[1]]
+        )
     return {
         "titre": f"Camion de {capacite} kg, n varie",
         "colonnes": ["n", "DP (ms)", "Glouton (ms)", "Valeur DP", "Valeur glouton"],
@@ -88,19 +97,36 @@ def perf_camion_n(capacite=50):
     }
 
 
-def perf_camion_c(n=10_000):
+def perf_camion_c(colis=None, capacites=(50, 500, 5_000)):
     lignes = []
-    colis = generer_colis(n)
-    for capacite in [50, 500, 5_000]:
+    colis = colis or generer_colis(10_000)
+    n = len(colis)
+    for capacite in capacites:
         t_dp, charge_dp = mesurer(lambda: charger_dp(colis, capacite), repetitions=1)
-        t_gl, charge_gl = mesurer(lambda: charger_glouton(colis, capacite), repetitions=1)
+        t_gl, charge_gl = mesurer(
+            lambda: charger_glouton(colis, capacite), repetitions=1
+        )
         memoire = n * (capacite + 1) / 1e6
         lignes.append(
-            [capacite, t_dp * 1e3, t_gl * 1e3, memoire, totaux(charge_dp)[1], totaux(charge_gl)[1]]
+            [
+                capacite,
+                t_dp * 1e3,
+                t_gl * 1e3,
+                memoire,
+                totaux(charge_dp)[1],
+                totaux(charge_gl)[1],
+            ]
         )
     return {
         "titre": f"{n} colis, la capacité C varie",
-        "colonnes": ["C (kg)", "DP (ms)", "Glouton (ms)", "Mémoire choix (Mo)", "Valeur DP", "Valeur glouton"],
+        "colonnes": [
+            "C (kg)",
+            "DP (ms)",
+            "Glouton (ms)",
+            "Mémoire choix (Mo)",
+            "Valeur DP",
+            "Valeur glouton",
+        ],
         "lignes": lignes,
     }
 
